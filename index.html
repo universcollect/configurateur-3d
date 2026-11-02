@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Configurateur de mug — Univers Collect</title>
+<style>
+:root{--ink:#171717;--muted:#666;--line:#e5e5e5;--paper:#fff;--soft:#f5f5f5}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:#f4f4f4}
+header{background:#171717;color:#fff;padding:22px 5%;display:flex;align-items:center;justify-content:space-between;gap:16px}header strong{font-family:Georgia,serif;font-size:25px}header span{font-size:13px;color:#ddd}
+main{width:100%;max-width:none;margin:24px auto;padding:0 clamp(12px,2.2vw,30px)}.intro{margin-bottom:18px}.intro h1{font-family:Georgia,serif;font-size:clamp(23px,2.2vw,32px);margin:0 0 8px}.intro p{color:var(--muted);margin:0}
+.layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(290px,.7fr);gap:clamp(12px,1.6vw,22px);width:100%;align-items:stretch}.panel{min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}.viewer{min-height:540px;position:relative;background:linear-gradient(145deg,#fafafa,#ededed)}#view{width:100%;height:540px;display:block}.hint{position:absolute;bottom:12px;left:14px;background:#fffE;padding:8px 11px;border-radius:8px;font-size:12px;color:#555}
+.controls{padding:22px}.controls h2{font-size:18px;margin:0 0 18px}.field{margin:0 0 17px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}.field input[type=text],.field select{width:100%;padding:11px;border:1px solid #ccc;border-radius:8px;background:white;font-size:14px}.field input[type=color]{width:60px;height:38px;border:0;background:none;padding:0}.field input[type=file]{width:100%;font-size:13px}.row{display:flex;gap:12px;align-items:center}.row>*{flex:1}.btn{border:0;border-radius:8px;padding:12px 15px;font-weight:700;cursor:pointer}.primary{background:#171717;color:#fff;width:100%}.secondary{background:#eee;color:#171717}.note{font-size:12px;line-height:1.5;color:#666;background:#f7f7f7;border-radius:8px;padding:12px}.price{font-size:13px;margin:15px 0;color:#555}.price strong{font-size:19px;color:#171717}.footer{font-size:12px;color:#777;text-align:center;margin:18px 0 30px}
+@media(max-width:650px){.layout{grid-template-columns:1fr}.viewer,#view{min-height:360px;height:360px}header{align-items:flex-start;flex-direction:column;padding:18px 5%}.controls{padding:18px}.intro h1{font-size:24px}}
+</style>
+</head>
+<body>
+<header><strong>Univers Collect</strong><span>Votre imagination, notre savoir-faire.</span></header>
+<main>
+<section class="intro"><h1>Créez votre mug personnalisé — 350 ml</h1><p>Ajoutez votre texte ou votre photo et faites tourner le mug pour visualiser votre création.</p></section>
+<div class="layout">
+<section class="panel viewer"><canvas id="view"></canvas><div class="hint">Faites glisser pour tourner · Molette pour zoomer</div></section>
+<section class="panel controls">
+<h2>Personnalisez votre mug</h2>
+<div class="field"><label for="mugColor">Couleur du mug</label><select id="mugColor"><option value="#ffffff">Blanc</option><option value="#111111">Noir</option><option value="#d8d8d8">Gris clair</option><option value="#e8d6bd">Crème</option></select></div>
+<div class="field"><label for="textInput">Votre texte</label><input id="textInput" type="text" maxlength="32" placeholder="Ex. : Super Papa"></div>
+<div class="row"><div class="field"><label for="font">Police</label><select id="font"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Courier New</option><option>Impact</option></select></div><div class="field"><label for="textColor">Couleur du texte</label><input id="textColor" type="color" value="#171717"></div></div>
+<div class="field"><label for="imageInput">Ajouter une photo ou une image</label><input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp"></div>
+<div class="field"><button class="btn secondary" id="clearImage" type="button">Retirer la photo</button></div>
+<div class="note">Astuce : le visuel est une prévisualisation indicative. Le rendu final dépendra du gabarit d'impression et de la zone réellement sublimable du mug.</div>
+<div class="price">Prix : <strong>à définir</strong><br>Les tarifs et options seront ajoutés après validation de ta grille de prix.</div>
+<button class="btn primary" type="button" id="request">Préparer ma demande</button>
+<p class="note" id="status" aria-live="polite">Cette première version permet de tester la personnalisation et l'aperçu 3D. Elle n'enregistre pas encore la commande et ne prend pas de paiement.</p>
+</section>
+</div>
+<div class="footer">© Univers Collect — Configurateur en cours de préparation</div>
+</main>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+const canvas=document.querySelector('#view');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(canvas.clientWidth,canvas.clientHeight,false);renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#f0f0f0');
+const camera=new THREE.PerspectiveCamera(35,canvas.clientWidth/canvas.clientHeight,.1,100);camera.position.set(2.8,1.75,3.9);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,.66,0);controls.minDistance=2.4;controls.maxDistance=7;controls.maxPolarAngle=Math.PI*.85;
+scene.add(new THREE.HemisphereLight(0xffffff,0x777777,2));const key=new THREE.DirectionalLight(0xffffff,2.1);key.position.set(4,6,5);scene.add(key);const fill=new THREE.DirectionalLight(0xffffff,.8);fill.position.set(-4,2,-3);scene.add(fill);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:'#eeeeee',roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=-.02;scene.add(floor);
+// Canvas texture used as the printable wrap surface.
+const design=document.createElement('canvas');design.width=1024;design.height=512;const ctx=design.getContext('2d');
+let uploaded=null;let mugColor='#ffffff';let textValue='';let textColor='#171717';let font='Arial';
+function redraw(){ctx.clearRect(0,0,design.width,design.height);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,design.width,design.height);
+ if(uploaded){const maxW=440,maxH=420,scale=Math.min(maxW/uploaded.width,maxH/uploaded.height);const w=uploaded.width*scale,h=uploaded.height*scale;ctx.drawImage(uploaded,70,46,w,h)}
+ if(textValue){ctx.fillStyle=textColor;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`bold 54px "${font}"`;ctx.fillText(textValue,720,256,520)}
+ texture.needsUpdate=true;}
+const texture=new THREE.CanvasTexture(design);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=renderer.capabilities.getMaxAnisotropy();
+const bodyMat=new THREE.MeshStandardMaterial({color:mugColor,map:texture,roughness:.3,metalness:0});
+const ceramicMat=new THREE.MeshStandardMaterial({color:mugColor,roughness:.3,metalness:0,side:THREE.DoubleSide});
+
+// Dimensions proportionnelles à un mug sublimable d'environ 350 ml (35 cl).
+// Hauteur approximative : 9,5 cm ; diamètre supérieur : 8,2 cm.
+const mugHeight=1.25, topRadius=.54, bottomRadius=.50, mugCenterY=mugHeight/2;
+const bodyGeo=new THREE.CylinderGeometry(topRadius,bottomRadius,mugHeight,96,1,true);
+const body=new THREE.Mesh(bodyGeo,bodyMat);
+body.position.y=mugCenterY;
+scene.add(body);
+
+// Bord supérieur et base arrondis.
+const rim=new THREE.Mesh(new THREE.TorusGeometry(topRadius-.005,.018,12,96),ceramicMat);
+rim.rotation.x=Math.PI/2;
+rim.position.y=mugHeight;
+scene.add(rim);
+
+const base=new THREE.Mesh(new THREE.TorusGeometry(bottomRadius-.01,.018,10,96),ceramicMat);
+base.rotation.x=Math.PI/2;
+base.position.y=.018;
+scene.add(base);
+
+// Intérieur visible du mug.
+const innerWall=new THREE.Mesh(
+  new THREE.CylinderGeometry(topRadius-.035,bottomRadius-.035,mugHeight-.10,96,1,true),
+  new THREE.MeshStandardMaterial({color:'#f8f8f8',roughness:.38,side:THREE.BackSide})
+);
+innerWall.position.y=mugCenterY+.005;
+scene.add(innerWall);
+
+const innerFloor=new THREE.Mesh(
+  new THREE.CircleGeometry(bottomRadius-.035,96),
+  new THREE.MeshStandardMaterial({color:'#f4f4f4',roughness:.45,side:THREE.DoubleSide})
+);
+innerFloor.rotation.x=-Math.PI/2;
+innerFloor.position.y=.13;
+scene.add(innerFloor);
+
+// Anse arrondie, attachée au côté droit.
+const handleMat=new THREE.MeshStandardMaterial({color:mugColor,roughness:.3});
+// Anse en forme de C, dans le même plan vertical que le profil du mug.
+// Ses deux extrémités rejoignent la paroi ; aucune boucle ne traverse l'intérieur.
+const handlePath=new THREE.CatmullRomCurve3([
+  new THREE.Vector3(.475,.96,0),
+  new THREE.Vector3(.70,1.00,0),
+  new THREE.Vector3(.96,.88,0),
+  new THREE.Vector3(1.04,.66,0),
+  new THREE.Vector3(.96,.44,0),
+  new THREE.Vector3(.70,.32,0),
+  new THREE.Vector3(.475,.36,0)
+]);
+const handle=new THREE.Mesh(new THREE.TubeGeometry(handlePath,72,.065,16,false),handleMat);
+scene.add(handle);
+
+// Ombre discrète sous le mug.
+const shadow=new THREE.Mesh(
+  new THREE.CircleGeometry(.72,64),
+  new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.07})
+);
+shadow.rotation.x=-Math.PI/2;
+shadow.position.y=.002;
+scene.add(shadow);
+redraw();
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(canvas);
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();
+document.querySelector('#mugColor').addEventListener('change',e=>{mugColor=e.target.value;bodyMat.color.set(mugColor);handleMat.color.set(mugColor);ceramicMat.color.set(mugColor)});
+document.querySelector('#textInput').addEventListener('input',e=>{textValue=e.target.value;redraw()});document.querySelector('#textColor').addEventListener('input',e=>{textColor=e.target.value;redraw()});document.querySelector('#font').addEventListener('change',e=>{font=e.target.value;redraw()});
+document.querySelector('#imageInput').addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>8*1024*1024){alert('Choisis une image de moins de 8 Mo.');e.target.value='';return}const url=URL.createObjectURL(file);const img=new Image();img.onload=()=>{uploaded=img;redraw();URL.revokeObjectURL(url)};img.src=url});
+document.querySelector('#clearImage').addEventListener('click',()=>{uploaded=null;document.querySelector('#imageInput').value='';redraw()});
+document.querySelector('#request').addEventListener('click',()=>{document.querySelector('#status').textContent='La prévisualisation fonctionne. La prochaine étape sera de permettre l’envoi de la création avec les coordonnées du client, puis de connecter le panier et le paiement.'});
+</script>
+</body></html>
